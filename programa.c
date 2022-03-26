@@ -1,31 +1,23 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-// atualização fazer tudo em binário para as leituras
-// Dicas úteis posso usar o modo de abertura w no onde parou pq o w sempre sobre escreve o conteúdo.
-//
+#define tamanhoMax 18446744073709551615
+// Tenho que criar uma lógica para pular os numeros terminados em 5 porque todo o número terminado em 5 é divisivel por 5.
 
 typedef unsigned long long int ull;
 FILE *listaDePrimos;
 FILE *listaDeCompostos;
 FILE *ondeParou;
 
-void Eprimo(ull numeroTeste);
-
+int Eprimo(ull numeroTeste);
+void checkfopen(FILE *Fptr);
 
 int main(){
 
-    int numeroDeTestes;
+    int numeroDeTestes, testePrimo;
     ull numeroTeste[1];
 
     ondeParou = fopen("ondeParou.bin", "rb");
-
-    if(ondeParou == NULL){
-
-        puts("Nao foi possivel abrir o arquivo.");
-        return 0; // estudar exit() e perror.
-    }
-
+    checkfopen(ondeParou);
     fread(numeroTeste, sizeof(ull), 1, ondeParou); 
     fclose(ondeParou);
 
@@ -38,11 +30,39 @@ int main(){
 
             return 0;
         }
+
         for(size_t i = 0; i < numeroDeTestes; i++)
         {
-            numeroTeste = numeroTeste + 2;
-            Eprimo(numeroTeste);
+            numeroTeste[0] = numeroTeste[0] + 2;
+            if (numeroTeste[0] > tamanhoMax)
+            {
+                puts("O programa nao pode mais executar porque o numero a ser testado ultrapassou o tamanho limite.");
+            }
+            testePrimo = Eprimo(numeroTeste[0]);
 
+            if (testePrimo == 1)
+            {
+                listaDePrimos = fopen("lista de primos.bin", "ab");
+                checkfopen(listaDePrimos);
+                fwrite(numeroTeste, sizeof(ull), 1, listaDePrimos);
+                fclose(listaDePrimos);
+            }else{
+
+                listaDeCompostos = fopen("lista de compostos.bin", "ab");
+                checkfopen(listaDeCompostos);
+                fwrite(numeroTeste, sizeof(ull), 1, listaDeCompostos);
+                fclose(listaDeCompostos);
+            }
+            
+            if (i == numeroDeTestes - 1)
+            {
+                ondeParou = fopen("ondeParou.bin", "wb");
+                checkfopen(ondeParou);
+                fwrite(numeroTeste, sizeof(ull), 1, ondeParou);
+                fclose(ondeParou);
+        
+            }
+            
         }
         
     }
@@ -50,56 +70,41 @@ int main(){
     return 0;
 }
 
-void Eprimo(ull numeroTeste){
+int Eprimo(ull numeroTeste){// se primo return 1 senao 2
 
-    ull divisores[10]; 
+    ull divisores[1];
     ull resto;
     ull quociente;
 
-   listaDePrimos = fopen("lista de primos.bin", "rb");
+    listaDePrimos = fopen("lista de primos.bin", "rb");
+    checkfopen(listaDePrimos);
 
-    while((fread(divisores, sizeof(ull), 10, listaDePrimos)) != EOF){
+    do
+    {
+        fread(divisores, sizeof(ull), 1, listaDePrimos);
 
-        resto = numeroTeste % divisor;
+        resto = numeroTeste % divisores[0];
+        quociente = numeroTeste / divisores[0];
 
-        if(resto == 0){
-
-            //colocar o numero nos compostos
-            listaDeCompostos = fopen("lista de compostos.txt", "a");
-
-            if(listaDeCompostos == NULL){
-
-                puts("erro ao abrir arquivo.");
-                exit(-1);
-            }
-
-            fprintf(listaDeCompostos, "%llu\n");
-            fclose(listaDeCompostos);
-            break; //para sair do loop
-        }
-        if(quociente <= divisor){
-
-            //colocar o numero nos primos
-            listaDePrimos = fopen("lista de primos.txt", "a");
-
-            if(listaDePrimos == NULL){
-
-                puts("erro ao abrir arquivo.");
-                exit(-1);
-            }
-
-            fprintf(listaDePrimos, "%llu\n");
+        if (resto == 0)
+        {
             fclose(listaDePrimos);
-            break;
+            return 2;
         }
-    }
-
+        
+    } while (divisores[0] < quociente); //talvez precise acrescentar  && !feof(listaDePrimos);
+    
     fclose(listaDePrimos);
+
+    return 1;
+
 }
 
+void checkfopen(FILE *Fptr){
 
-
-
-
-
-// O onde parou deve receber o número incrementado em 2.
+    if (Fptr == NULL)
+    {
+        puts("erro ao abrir o arquivo.");// posso substituir por perror.
+        exit(EXIT_FAILURE);
+    }
+}
